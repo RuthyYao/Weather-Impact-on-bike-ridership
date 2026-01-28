@@ -1,4 +1,6 @@
-# Weather Impact on Bike Ridership
+# Rider Demand & Weather Impact Analysis
+
+![Front Banner](images/front%20banner.jpg)
 
 
 ## Project Overview
