@@ -117,15 +117,6 @@ This step mimics an automated ingestion process commonly used in cloud-based dat
   * Promote **annual memberships** to stabilize usage during inclement weather.
   * Explore partnerships with other transportation providers (e.g. taxis or public transit) to offer integrated mobility options.
 
-Recall score for negative class (The percentage of the negative reviews that the Model did predicted as negative): 
-* Random Forest: 0.82
-* Logistic Regression: 0.74
-
-Precision score for positive class (The percentage of all predicted positive reviews that are actually positive):
-* Random Forest: 0.94
-* Logistic Regression: 0.92
-
-
 ## Next Steps
 To further deepen the analysis, the next phase of this project will focus on **spatial and station-level analysis**, with the goal of uncovering localized demand patterns and weather sensitivity across the Citi Bike network.
 
