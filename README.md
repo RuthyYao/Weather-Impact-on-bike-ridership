@@ -154,19 +154,13 @@ These insights can help inform **station placement, bike rebalancing strategies,
 ## Repository Structure
 
 ```
-├── data/ # Raw and processed datasets
-├── models/ # dbt models
-├── analysis/ # SQL and Python analysis notebooks/scripts
-├── dashboards/ # BI dashboards or screenshots
+├── data
+├── images
+├── Data Warehouse & Transformations/ # SQL loading and transformation scripts
+├── dashboard/ # Tableau dashboard
 ├── docs/ # Project documentation
 └── README.md
 ```
-
-## For More Information
-
-See the full analysis in the [Jupyter Notebook](./amazon_customers_review_analysis.ipynb) or review this [presentation](./amazon_customer_review_presentation.pdf).
-
-For additional info, contact Ruthy Yao at [zejia.yao@gmail.com](mailto:zejia.yao@gmail.com) or [LinkedIn](https://www.linkedin.com/in/ruthy-yao-b3258b25/).
 
 ## Why This Project
 
