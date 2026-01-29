@@ -154,11 +154,10 @@ These insights can help inform **station placement, bike rebalancing strategies,
 ## Repository Structure
 
 ```
+├── Data Warehouse & Transformations/ # SQL loading and transformation scripts
 ├── data
 ├── images
-├── Data Warehouse & Transformations/ # SQL loading and transformation scripts
-├── dashboard/ # Tableau dashboard
-├── docs/ # Project documentation
+├── Dashboard/ # Tableau dashboard
 └── README.md
 ```
 
