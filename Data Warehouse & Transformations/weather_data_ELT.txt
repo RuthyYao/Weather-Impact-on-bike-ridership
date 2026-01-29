@@ -1,0 +1,121 @@
+-----------------------------------------------------------------------------------
+-- Data loading, transformation and exploration in Redshift --
+-----------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------------
+-- Create weather data table --
+-----------------------------------------------------------------------------------
+DROP SCHEMA if exists analysis CASCADE;
+CREATE SCHEMA if not exists analysis;
+DROP TABLE IF EXISTS analysis.weather_data;
+CREATE TABLE analysis.weather_data (
+    weather_time TIMESTAMP,
+    city_id INTEGER,
+    city_name VARCHAR(100),
+    country VARCHAR(10),
+    city_latitude FLOAT,
+    city_longitude FLOAT,
+    clouds INTEGER,
+    humidity INTEGER,
+    min_temp FLOAT,
+    max_temp FLOAT,
+    weather VARCHAR(50),
+    weather_desc VARCHAR(100),
+    wind_deg FLOAT,
+    wind_speed FLOAT
+);
+
+-----------------------------------------------------------------------------------
+-- Copy Data from S3 to Redshift --
+-----------------------------------------------------------------------------------
+COPY weather_data
+FROM 's3://citibike-weather-analysis/weather_data.csv'
+IAM_ROLE 'arn:aws:iam::219002378929:role/Redshift-data-analyst'
+FORMAT AS CSV
+DELIMITER ','
+IGNOREHEADER 1
+DATEFORMAT 'auto'
+TIMEFORMAT 'auto';
+
+
+
+-----------------------------------------------------------------------------------
+-- Data Validation --
+----------------------------------------------------------------------------------- 
+
+SELECT COUNT(*) FROM weather_data;
+SELECT * FROM weather_data LIMIT 10;
+
+-- Check if there is duplicate rows, using row_number() 
+
+WITH weather_duplicate AS(
+    SELECT
+        *,
+        row_number() OVER(
+            PARTITION BY weather_time, weather, weather_desc, clouds, humidity,wind_deg,wind_speed,min_temp,max_temp 
+            ORDER BY weather_time, weather, weather_desc, clouds, humidity,wind_deg,wind_speed,min_temp,max_temp
+        ) AS index
+    FROM weather_data
+
+)
+SELECT
+    *
+FROM weather_duplicate
+WHERE index >1;
+
+---------------------------------------------------------------------------------------
+-- Data Cleaning --
+---------------------------------------------------------------------------------------
+
+
+-- Clean the data and save into a new hourly weather data table 
+    -- 1. Truncate the date/time to hour precision. 
+    -- 2. Use CASE statement to convert the wind-deg to wind-direction.
+    -- 3. Convert temperatures from Kelvin to Celsius
+          -- using the average of the max_temp and the min_temp as the temperature of the hour.
+    -- 4. Use row_number() to remove dupliates.
+    -- 5. Filter the date to 2018 as I will use 2018 data for this analysis.
+
+
+DROP TABLE IF EXISTS analysis.weather_hourly_cleaned;
+CREATE TABLE analysis.weather_hourly_cleaned AS
+WITH weather_cte AS(
+    SELECT  
+        weather_time,
+        DATE_TRUNC('hour', weather_time) AS date_hour,  -- Extract the hour precision
+        weather, 
+        weather_desc, 
+        clouds, 
+        humidity,
+        CASE 
+            WHEN wind_deg =0 THEN 'East'
+            WHEN wind_deg = 90 THEN 'North'
+            WHEN wind_deg = 180 THEN 'West'
+            WHEN wind_deg = 270 THEN 'South'
+            WHEN wind_deg >0 AND wind_deg <90 THEN 'Northeast'
+            WHEN wind_deg >90 AND wind_deg <180 THEN 'Northwest'
+            WHEN wind_deg >180 AND wind_deg<270 THEN 'Southwest'
+            WHEN wind_deg >180 AND wind_deg < 360 THEN 'Southeast'
+        END AS wind_direction,
+        wind_speed,
+        ROUND((min_temp-273.15 + max_temp-273.15)/2,1) AS temp,  -- average the min and max temperature
+        row_number() OVER(
+            PARTITION BY weather_time, weather, weather_desc, clouds, humidity,wind_deg,wind_speed,min_temp,max_temp 
+            ORDER BY weather_time, weather, weather_desc, clouds, humidity,wind_deg,wind_speed,min_temp,max_temp
+        ) AS index 
+    FROM weather_data
+    WHERE EXTRACT(YEAR FROM weather_time::timestamp) = 2018
+)
+SELECT
+    date_hour,
+    weather, 
+    weather_desc, 
+    clouds, 
+    humidity,
+    wind_direction,
+    wind_speed,
+    temp
+FROM weather_cte
+WHERE index = 1  -- remove the duplicate rows
+ORDER BY date_hour;
+

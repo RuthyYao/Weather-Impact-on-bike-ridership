@@ -1,0 +1,81 @@
+-- Consolidate the trip and weather data to create ONE Fact Table
+
+
+DROP TABLE IF EXISTS analysis.hourly_consol;
+CREATE TABLE analysis.hourly_consol AS
+SELECT
+    *
+FROM analysis.bike_hire_cleaned as b
+LEFT JOIN analysis.weather_hourly_cleaned as w
+USING (date_hour); -- using date_hour as the join key.
+
+-- check if there are null values after merge.
+
+SELECT
+    *
+FROM analysis.hourly_consol
+where weather is null;
+
+-- Update the hourly_consol table 
+    -- fill the null value with the value of the previous non-null row using last_value()
+
+WITH filled_data AS (
+    SELECT 
+        date_hour, 
+        weather_desc,
+        clouds,
+        humidity,
+        wind_direction,
+        wind_speed,
+        temp,
+        LAST_VALUE(weather) IGNORE NULLS OVER (
+            ORDER BY date_hour
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+        ) AS filled_weather,
+        LAST_VALUE(weather_desc) IGNORE NULLS OVER (
+            ORDER BY date_hour
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+        ) AS filled_weather_desc,
+        LAST_VALUE(clouds) IGNORE NULLS OVER (
+            ORDER BY date_hour
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+        ) AS filled_clouds,
+        LAST_VALUE(humidity) IGNORE NULLS OVER (
+            ORDER BY date_hour
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+        ) AS filled_humidity,
+         LAST_VALUE(wind_direction) IGNORE NULLS OVER (
+            ORDER BY date_hour
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+        ) AS filled_wind_direction,
+         LAST_VALUE(wind_speed) IGNORE NULLS OVER (
+            ORDER BY date_hour
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+        ) AS filled_wind_speed,
+        LAST_VALUE(temp) IGNORE NULLS OVER (
+            ORDER BY date_hour
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+        ) AS filled_temp
+    FROM analysis.hourly_consol
+)
+UPDATE analysis.hourly_consol
+SET 
+    weather = fd.filled_weather,
+    weather_desc = fd.filled_weather_desc,
+    clouds = fd.filled_clouds,
+    humidity = fd.filled_humidity,
+    wind_direction = fd.filled_wind_direction,
+    wind_speed = fd.filled_wind_speed,
+    temp = fd.filled_temp
+FROM filled_data fd
+WHERE analysis.hourly_consol.date_hour = fd.date_hour
+AND (analysis.hourly_consol.weather IS NULL
+    OR analysis.hourly_consol.weather_desc IS NULL
+    OR analysis.hourly_consol.clouds IS NULL 
+    OR analysis.hourly_consol.humidity IS NULL 
+    OR analysis.hourly_consol.wind_speed IS NULL
+    OR analysis.hourly_consol.wind_direction IS NULL
+    OR analysis.hourly_consol.temp IS NULL);
+
+-- Check the updated table.
+SELECT * FROM analysis.hourly_consol LIMIT 10;

@@ -1,0 +1,155 @@
+-----------------------------------------------------------------------------------------------
+-- Trip data ELT --
+-----------------------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------------------------
+-- Create bike_hire data table --
+-----------------------------------------------------------------------------------------------
+DROP TABLE IF EXISTS analysis.bike_hire;
+CREATE TABLE analysis.bike_hire (
+    tripduration INTEGER,
+    starttime TIMESTAMP,
+    stoptime TIMESTAMP,
+    start_station_id INTEGER,
+    start_station_name VARCHAR(100),
+    start_station_latitude FLOAT,
+    start_station_longitude FLOAT,
+    end_station_id INTEGER,
+    end_station_name VARCHAR(100),
+    end_station_latitude FLOAT,
+    end_station_longitude FLOAT,
+    bikeid INTEGER,
+    usertype VARCHAR(20),
+    birth_year INTEGER,
+    gender INTEGER
+);
+
+
+----------------------------------------------------------------------------------------------
+-- Copy data from S3 to Redshift --
+----------------------------------------------------------------------------------------------
+COPY analysis.bike_hire
+FROM 's3://citibike-weather-analysis/citibike-2018.csv'
+IAM_ROLE 'arn:aws:iam::219002378929:role/Redshift-data-analyst'
+FORMAT AS CSV
+DELIMITER ','
+IGNOREHEADER 1
+DATEFORMAT 'auto'
+TIMEFORMAT 'auto';
+
+
+----------------------------------------------------------------------------------------------
+--Data exploration and validation --
+----------------------------------------------------------------------------------------------
+
+SELECT COUNT(*) FROM analysis.bike_hire;
+SELECT * FROM analysis.bike_hire LIMIT 10;
+
+
+-- check the gender
+SELECT
+    gender,
+    COUNT(*)
+from analysis.bike_hire
+Group BY gender;
+
+-- There are three gender values. I will keep the gender value 1(male) and 2(female) and drop the data with gender velue 0.
+-- The gender is in numerical, Will convert to "male" and "female". 
+
+
+
+-- check the trip duration distribution
+SELECT
+  COUNT(tripduration) AS count,
+  MIN(tripduration) AS min_duration,
+  MAX(tripduration) AS max_duration,
+  AVG(tripduration) AS mean_duration,
+  STDDEV(tripduration) AS standard_deviation,
+  PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY tripduration) AS q1,
+  PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY tripduration) AS median,
+  PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY tripduration) AS q3
+FROM analysis.bike_hire;
+
+-- Remove the outliers. 
+    -- I'll drop the trips with duration above 3*std, which is 22,000.
+
+-- Check how many trips are above 22,000.
+SELECT 
+    COUNT(tripduration)
+FROM analysis.bike_hire
+WHERE tripduration > 22000;
+
+-- There are 491 trips longer than 22,000, I'll remove those outliers.
+
+
+-------------------------------------------------------------------------------------------------------------
+-- Data Cleaning & Transformation --
+-------------------------------------------------------------------------------------------------------------
+-- Clean the bike rental data table
+    -- consolidate all the above steps into one syntax.
+DROP TABLE IF EXISTS analysis.bike_hire_cleaned;
+CREATE TABLE analysis.bike_hire_cleaned AS
+SELECT
+    DATE_TRUNC('hour', starttime) AS date_hour,
+    DATE_TRUNC('day', starttime) AS hiring_date,
+    ROUND((tripduration:: FLOAT4)/60, 1) AS tripduration_hour,  -- convert measurement from min to hour
+    start_station_name,
+    start_station_latitude,
+    start_station_longitude,
+    usertype,
+    EXTRACT(YEAR FROM starttime::timestamp) - birth_year AS age,
+    CASE WHEN gender = 1 THEN 'Male' WHEN gender = 2 THEN 'Female' END AS gender
+FROM analysis.bike_hire
+WHERE tripduration <22000
+AND gender != 0;
+
+
+-- validate the data
+SELECT * FROM analysis.bike_hire_cleaned LIMIT 10;
+SELECT COUNT(*) FROM analysis.bike_hire_cleaned;
+
+
+-- The tripduration in the original dataset is measured in second, not min. I will update the table column name
+ALTER TABLE analysis.bike_hire_cleaned RENAME COLUMN tripduration_hour TO tripduration_min
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
