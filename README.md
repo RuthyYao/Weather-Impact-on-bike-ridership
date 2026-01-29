@@ -91,7 +91,8 @@ This step mimics an automated ingestion process commonly used in cloud-based dat
 
 ## Dashboard 
 
-images/dashboard_preview.PNG
+Click the preview image below will link to the full dashboard.
+
 [![Dashboard Preview](images/dashboard_preview.PNG)](https://public.tableau.com/app/profile/ruthy.yao/viz/Citibiki-Weather-Ride-Analysis/Overview)
 
 
