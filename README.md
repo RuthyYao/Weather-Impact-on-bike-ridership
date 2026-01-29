@@ -89,6 +89,10 @@ This step mimics an automated ingestion process commonly used in cloud-based dat
 * SQL (data transformation and analytics)
 * Tableau (data visualization)
 
+## Dashboard 
+
+![dashboard_preview](images/dashboard_preview.PNG)
+
 ## Key Insights
 
 * **Commuting-driven usage**: Daily commuting is the primary use case, with the highest engagement from riders aged 25–35, and male riders outnumbering female riders by approximately 3.5×.
